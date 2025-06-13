@@ -28,4 +28,4 @@ class Bootc:
 
         # Publish the container with the specified tag and return the digest reference
         # The publish command returns a string like "ghcr.io/owner/image@sha256:thedigest"
-        return await authed_container.publish(address=image_ref_with_tag)
+        return await authed_container.publish(address=image_ref_with_tag).stdout()
