@@ -1,34 +1,63 @@
-name: dagger
+name: Dagger Build, Publish, and Sign
+
 on:
   push:
     branches: [main]
 
 jobs:
-  build-publish:
+  build-publish-sign: # Renamed job for clarity
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      packages: write
+      contents: read      # For actions/checkout
+      packages: write    # For Dagger to push to GHCR
+      id-token: write    # For Cosign keyless signing
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up cosign
+
+      - name: Set up Cosign
         id: cosign
         uses: sigstore/cosign-installer@main
+
       - name: Call Dagger Function to build and publish to ghcr.io
         id: dagger_build_publish
-        uses: dagger/dagger-for-github@8.0.0
+        uses: dagger/dagger-for-github@8.0.0 # Please verify this version
         with:
-          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
-          args: build-and-publish --registry=$DOCKER_REGISTRY --image-name=$DOCKER_IMAGE_NAME --username=$DOCKER_USERNAME --password=env://DOCKER_PASSWORD
+          # module: . # Optional: specify if your Dagger module is not in the root
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }} # Include if you use Dagger Cloud
+          # Correctly invoke the Dagger function using 'call'
+          # Assumes your Python file (e.g., main.py or ci.py) containing the Bootc class is in the root.
+          # If it's in a subdir like 'dagger_module', use 'call ./dagger_module build-and-publish ...'
+          args: |
+            call . build-and-publish \
+              --registry=${{ env.DOCKER_REGISTRY }} \
+              --image-name=${{ env.DOCKER_IMAGE_NAME }} \
+              --tag=${{ env.IMAGE_TAG }} \
+              --username=${{ env.DOCKER_USERNAME }} \
+              --password=env:DOCKER_PASSWORD
         env:
-          DOCKER_REGISTRY: ghcr.io
+          DOCKER_REGISTRY: ghcr.io # Just the hostname
+          # DOCKER_IMAGE_NAME should be like 'owner/repository_name'
           DOCKER_IMAGE_NAME: ${{ github.repository }}
+          IMAGE_TAG: ${{ github.sha }} # Use the Git SHA as the image tag for uniqueness
           DOCKER_USERNAME: ${{ github.actor }}
+          # DOCKER_PASSWORD is the environment variable Dagger will look for
           DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Debug Dagger Output
+        if: always() # Run this step even if previous steps fail, to see the output
+        run: |
+          echo "Dagger output (steps.dagger_build_publish.outputs.result): '${{ steps.dagger_build_publish.outputs.result }}'"
+          echo "Dagger exit code: ${{ steps.dagger_build_publish.outputs.exit_code }}"
+
+
       - name: Sign image
         id: sign
+        # Only run if the Dagger step was successful and produced an output
+        if: steps.dagger_build_publish.outputs.result != '' && steps.dagger_build_publish.outputs.exit_code == 0
         run: |
-          cosign sign --yes ${{ steps.dagger_build_publish.outputs.result }}
+          echo "Attempting to sign image: ${{ steps.dagger_build_publish.outputs.result }}"
+          cosign sign --yes "${{ steps.dagger_build_publish.outputs.result }}"
         env:
-          COSIGN_EXPERIMENTAL: 1
+          COSIGN_EXPERIMENTAL: 1 # For keyless signing
