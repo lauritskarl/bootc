@@ -15,11 +15,10 @@ jobs:
       - name: Call Dagger Function to build and publish to ghcr.io
         uses: dagger/dagger-for-github@8.0.0
         with:
-          version: "latest"
           cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
           args: build-and-publish --registry=$DOCKER_REGISTRY --image-name=$DOCKER_IMAGE_NAME --username=$DOCKER_USERNAME --password=env://DOCKER_PASSWORD
         env:
           DOCKER_REGISTRY: ghcr.io
           DOCKER_IMAGE_NAME: ${{ github.repository }}
           DOCKER_USERNAME: ${{ github.actor }}
-          DOCKER_PASSWORD: ${{ github.token }}
+          DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
