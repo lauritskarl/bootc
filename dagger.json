@@ -1,0 +1,8 @@
+{
+  "name": "bootc",
+  "engineVersion": "v0.18.10",
+  "sdk": {
+    "source": "python"
+  },
+  "source": ".dagger"
+}
