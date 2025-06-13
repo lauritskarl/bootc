@@ -29,13 +29,7 @@ jobs:
           # Correctly invoke the Dagger function using 'call'
           # Assumes your Python file (e.g., main.py or ci.py) containing the Bootc class is in the root.
           # If it's in a subdir like 'dagger_module', use 'call ./dagger_module build-and-publish ...'
-          args: |
-            call . build-and-publish \
-              --registry=${{ env.DOCKER_REGISTRY }} \
-              --image-name=${{ env.DOCKER_IMAGE_NAME }} \
-              --tag=${{ env.IMAGE_TAG }} \
-              --username=${{ env.DOCKER_USERNAME }} \
-              --password=env:DOCKER_PASSWORD
+          args: build-and-publish --registry=$DOCKER_REGISTRY --image-name=$DOCKER_IMAGE_NAME --tag=${{ env.IMAGE_TAG }} --username=$DOCKER_USERNAME --password=env://DOCKER_PASSWORD
         env:
           DOCKER_REGISTRY: ghcr.io # Just the hostname
           # DOCKER_IMAGE_NAME should be like 'owner/repository_name'
